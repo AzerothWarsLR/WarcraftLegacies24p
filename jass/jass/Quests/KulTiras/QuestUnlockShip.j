@@ -17,13 +17,14 @@ library QuestUnlockShip requires QuestData, KultirasSetup, GeneralHelpers
       return "You lose everything you control, but you gain Katherine at the capital ship."
     endmethod
 
-    private method OnComplete takes nothing returns nothing
-      call RescueNeutralUnitsInRect(gg_rct_ShipAmbient, this.Holder.Player)
-      call PauseUnitBJ( false, gg_unit_h05V_0260 )
-      call SetUnitInvulnerable(gg_unit_h05V_0260, false)
-      set FACTION_KULTIRAS.Team = TEAM_ALLIANCE
-      set FACTION_TROLL.Team = TEAM_HORDE
-    endmethod
+   private method OnComplete takes nothing returns nothing
+    call RescueNeutralUnitsInRect(gg_rct_ShipAmbient, this.Holder.Player)
+    call PauseUnitBJ(false, gg_unit_h05V_0260)
+    call SetUnitInvulnerable(gg_unit_h05V_0260, false)
+    call SetUnitOwner(gg_unit_h05V_0260, this.Holder.Player, true)
+    set FACTION_KULTIRAS.Team = TEAM_ALLIANCE
+    set FACTION_TROLL.Team = TEAM_HORDE
+endmethod
 
     private method OnFail takes nothing returns nothing
       local unit u

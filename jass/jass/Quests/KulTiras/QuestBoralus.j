@@ -14,16 +14,21 @@ library QuestBoralus requires QuestData, ScarletSetup, GeneralHelpers
     endmethod
 
     private method OnFail takes nothing returns nothing
-      call RescueNeutralUnitsInRect(gg_rct_Kultiras, Player(PLAYER_NEUTRAL_AGGRESSIVE))
+    call RescueNeutralUnitsInRect(gg_rct_Kultiras, Player(PLAYER_NEUTRAL_AGGRESSIVE))
+    call PauseUnitBJ(true, gg_unit_h05V_0260)
+    call SetUnitInvulnerable(gg_unit_h05V_0260, true)
+    call SetUnitOwner(gg_unit_h05V_0260, Player(PLAYER_NEUTRAL_PASSIVE), true)
     endmethod
 
-    private method OnComplete takes nothing returns nothing
-      call RescueNeutralUnitsInRect(gg_rct_Kultiras, this.Holder.Player)
-      call PauseUnitBJ( true, gg_unit_h05V_0260 )      
-      if GetLocalPlayer() == this.Holder.Player then
-        call PlayThematicMusicBJ( "war3mapImported\\KultirasTheme.mp3" )
-      endif
-    endmethod
+private method OnComplete takes nothing returns nothing
+    call RescueNeutralUnitsInRect(gg_rct_Kultiras, this.Holder.Player)
+    call PauseUnitBJ(true, gg_unit_h05V_0260)
+    call SetUnitInvulnerable(gg_unit_h05V_0260, true)
+    call SetUnitOwner(gg_unit_h05V_0260, Player(PLAYER_NEUTRAL_PASSIVE), true)
+    if GetLocalPlayer() == this.Holder.Player then
+        call PlayThematicMusicBJ("war3mapImported\\KultirasTheme.mp3")
+    endif
+endmethod
 
     private method OnAdd takes nothing returns nothing
       call this.Holder.ModObjectLimit(QUEST_RESEARCH_ID, 1)

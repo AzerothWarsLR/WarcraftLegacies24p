@@ -1,0 +1,145 @@
+Frame "BACKDROP" "LegionBarBackdrop" {
+	Height 0.3,  //default Height
+    Width  0.3,  //default Width
+	
+    DecorateFileNames,
+    BackdropTileBackground,
+    BackdropBackground  "EscMenuButtonBackground",
+    BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+    BackdropCornerSize  0.0125,
+    BackdropBackgroundSize  0.256,
+    BackdropBackgroundInsets 0.005 0.005 0.005 0.005,
+    BackdropEdgeFile  "EscMenuBorder",
+}
+
+Frame "GLUETEXTBUTTON" "Demon" {
+    Width 0.228,
+    Height 0.035,
+    ControlStyle "AUTOTRACK|HIGHLIGHTONMOUSEOVER",
+    ButtonPushedTextOffset 0.002f -0.002f, 
+	DecorateFileNames,
+	UseActiveContext,
+
+    ControlBackdrop "DemonBackdrop",
+    Frame "BACKDROP" "DemonBackdrop" {
+		DecorateFileNames,
+		BackdropTileBackground,
+		UseActiveContext,
+    }
+
+    ControlPushedBackdrop "DemonPushedBackdrop",
+    Frame "BACKDROP" "DemonPushedBackdrop" {
+		DecorateFileNames,
+		BackdropTileBackground,
+		BackdropBackgroundInsets 0.001 0.001 0.001 0.001,
+		UseActiveContext,
+    }
+
+    ControlDisabledBackdrop "DemonDisabledBackdrop",
+    Frame "BACKDROP" "DemonDisabledBackdrop" {
+		DecorateFileNames,
+		BackdropTileBackground,
+		UseActiveContext,	
+    }
+
+    ControlDisabledPushedBackdrop "DemonDisabledPushedBackdrop",
+    Frame "BACKDROP" "DemonDisabledPushedBackdrop" {
+		DecorateFileNames,
+		BackdropTileBackground,
+		BackdropBackgroundInsets 0.001 0.001 0.001 0.001,
+		UseActiveContext,	
+    }
+
+    ControlMouseOverHighlight "DemonMouseOverHighlight",
+	Frame "HIGHLIGHT" "DemonMouseOverHighlight" {
+		DecorateFileNames,
+		HighlightType "FILETEXTURE",
+		HighlightAlphaFile "EscMenuButtonMouseOverHighlight",
+		HighlightAlphaMode "ADD",
+    }
+	
+	Frame "BACKDROP" "DemonCountBackdrop" {
+		SetPoint BOTTOMRIGHT, "Demon", BOTTOMRIGHT, -0.00, 0.00,
+		SetPoint BOTTOMLEFT, "Demon", BOTTOMLEFT, -0.00, 0.00,
+		SetPoint TOPLEFT, "Demon", TOPLEFT, -0.00, 0.00,
+		SetPoint TOPRIGHT, "Demon", TOPRIGHT, -0.00, 0.00,
+		Width 0.01,
+		Height 0.01,
+		DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+		BackdropTileBackground, //Tile mode enabled
+		BackdropBackground  "ToolTipBackground", //BackgroundFile
+		BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+		BackdropCornerSize  0.008, //higher numbers make the corners bigger.
+		BackdropBackgroundInsets 0.0022 0.0022 0.0022 0.0022, //makes the background smaller, from the outside.
+		BackdropEdgeFile  "ToolTipBorder", //the border File
+		BackdropBlendAll,
+		
+		Frame "TEXT" "LegionDemonCountText" {
+			DecorateFileNames,  //Inside this Frame Filenames are lookups in a string table like GameInterface etc.
+			FrameFont "EscMenuTextFont", 0.009, "",
+			FontJustificationH JUSTIFYCENTER,    //Place the Text in the left < > in regards left right
+			FontJustificationV JUSTIFYMIDDLE,    //place the Text in the middle in regards up down
+			FontFlags "FIXEDSIZE",
+			FontColor 1.0 1.0 1.0 1.0,
+			FontHighlightColor 1.0 1.0 1.0 1.0,
+		}		
+	}	
+	
+	Frame "BACKDROP" "DemonDescriptionBackdrop" {
+		SetPoint BOTTOMRIGHT, "Demon", BOTTOMRIGHT, -0.00, 0.00,
+		SetPoint BOTTOMLEFT, "Demon", BOTTOMLEFT, -0.00, 0.00,
+		SetPoint TOPLEFT, "Demon", TOPLEFT, -0.00, 0.00,
+		SetPoint TOPRIGHT, "Demon", TOPRIGHT, -0.00, 0.00,
+		Width 0.01,
+		Height 0.01,
+		DecorateFileNames, //Look-Up Names in some String table (for example gameinterface)
+		BackdropTileBackground, //Tile mode enabled
+		BackdropBackground  "ToolTipBackground", //BackgroundFile
+		BackdropCornerFlags "UL|UR|BL|BR|T|L|B|R",
+		BackdropCornerSize  0.008, //higher numbers make the corners bigger.
+		BackdropBackgroundInsets 0.0022 0.0022 0.0022 0.0022, //makes the background smaller, from the outside.
+		BackdropEdgeFile  "ToolTipBorder", //the border File
+		BackdropBlendAll,
+		
+		Frame "TEXT" "DemonDescriptionText" {
+			DecorateFileNames,  //Inside this Frame Filenames are lookups in a string table like GameInterface etc.
+			FrameFont "EscMenuTextFont", 0.009, "",
+			FontJustificationH JUSTIFYLEFT,    //Place the Text in the left < > in regards left right
+			FontJustificationV JUSTIFYTOP,    //place the Text in the middle in regards up down
+			FontFlags "FIXEDSIZE",
+			FontColor 1.0 1.0 1.0 1.0,
+			FontHighlightColor 1.0 1.0 1.0 1.0,
+		}		
+	}		
+}
+
+String "MyBarTextTemplate" {
+  //FontColor 0.99 0.427 0.0705 1.0, //Red Green Blue Alpha 0.0 to 1.0
+  FontColor 1.0 1.0 1.0 1.0,
+  FontShadowColor 0.0 0.0 0.0 0.9,
+  FontShadowOffset 0.001 -0.001,
+  Font "MasterFont", 0.01, //MasterFont is only valid with "DecorateFileNames,"
+}
+
+Frame "SIMPLESTATUSBAR" "MyBarEx" {
+  Width 0.07, //Default Width
+  Height 0.012, //Default Height
+  BarTexture "Replaceabletextures\Teamcolor\Teamcolor01.blp", //Default BarTexture
+  Layer "BACKGROUND" { //A simpleFrames thing, where this is placed layer wise
+    Texture "MyBarExBackground"{ //the BACKGROUND Texture named "MyBarExBackground" its also a frame and a child
+      File "Replaceabletextures\Teamcolor\Teamcolor27.blp", //Default Texture for "MyBarExBackground"
+    }
+  }
+  Frame "SIMPLEFRAME" "MyBarExFrame" { //Child of "MyBarEx"
+    DecorateFileNames, //Lookup FileNames in a StringList
+    SetAllPoints, //copy "MyBarEx"
+    Layer "ARTWORK" {
+      Texture "MyBarExBorder" {
+        File "SimpleXpBarBorder", //Default Texture for "MyBarExBorder"
+      }
+      String "MyBarExText" INHERITS "MyBarTextTemplate" {
+        Text "MyBarEx", //Default Text for "MyBarExText" which takes over Data from "MyBarTextTemplate"
+      }
+    }
+  }
+}

@@ -1,11 +1,11 @@
-# Default ignored files
+﻿# Default ignored files
 /shelf/
 /workspace.xml
 # Rider ignored files
-/.idea.WarcraftLegacies24p.iml
-/contentModel.xml
-/projectSettingsUpdater.xml
 /modules.xml
+/projectSettingsUpdater.xml
+/.idea.AzerothWarsLR-master.iml
+/contentModel.xml
 # Editor-based HTTP Client requests
 /httpRequests/
 # Datasource local storage ignored files

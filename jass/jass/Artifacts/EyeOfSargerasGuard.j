@@ -1,3 +1,4 @@
+
 library EyeOfSargerasGuard
 
 globals
@@ -18,6 +19,13 @@ globals
     boolean gg_impacted
 endglobals
 
+function B2S takes boolean b returns string
+    if b then
+        return "true"
+    endif
+    return "false"
+endfunction
+
 function RemoveImpactEffect takes nothing returns nothing
     call DestroyTrigger(GetTriggeringTrigger())
 endfunction
@@ -25,24 +33,54 @@ endfunction
 function OnMissileImpact takes nothing returns nothing
     local effect fx
     local trigger t
+    local boolean canReceiveItems
+    local real targetX = GetUnitX(gg_target)
+    local real targetY = GetUnitY(gg_target)
+
+    call BJDebugMsg("Missile Impact at X: " + R2S(targetX) + " Y: " + R2S(targetY))
 
     if not UnitAlive(gg_target) then
+        call BJDebugMsg("Target dead - dropping item at impact location")
         call SetItemPosition(gg_eye, gg_curX, gg_curY)
+        call SetItemVisible(gg_eye, true)
     else
-        call UnitAddAbility(gg_target, 'A01Y')
-        call UnitAddItem(gg_target, gg_eye)
-        set fx = AddSpecialEffect("Abilities\\Spells\\Undead\\DarkRitual\\DarkRitualTarget.mdl", GetUnitX(gg_target), GetUnitY(gg_target))
-        call BlzSetSpecialEffectScale(fx, 2.0)
-        call BlzSetSpecialEffectTime(fx, 1.0)
+        // Check if unit can receive items (has inventory)
+        set canReceiveItems = not IsUnitType(gg_target, UNIT_TYPE_STRUCTURE) and GetUnitState(gg_target, UNIT_STATE_MAX_INVENTORY_SIZE) > 0
+        
+        if canReceiveItems then
+            call BJDebugMsg("Target can receive items - attempting to give")
+            // First try to add ability
+            call UnitAddAbility(gg_target, 'A01Y')
+            
+            // Try to add item
+            if UnitAddItem(gg_target, gg_eye) then
+                call BJDebugMsg("Item added successfully")
+                
+                set fx = AddSpecialEffect("Abilities\\Spells\\Undead\\DarkRitual\\DarkRitualTarget.mdl", targetX, targetY)
+                call BlzSetSpecialEffectScale(fx, 2.0)
+                call BlzSetSpecialEffectTime(fx, 1.0)
 
-        set t = CreateTrigger()
-        call TriggerRegisterUnitEvent(t, gg_target, EVENT_UNIT_DEATH)
-        call TriggerAddAction(t, function RemoveImpactEffect)
+                set t = CreateTrigger()
+                call TriggerRegisterUnitEvent(t, gg_target, EVENT_UNIT_DEATH)
+                call TriggerAddAction(t, function RemoveImpactEffect)
+            else
+                call BJDebugMsg("Failed to add item - dropping near target")
+                // If item couldn't be added, drop it near the target
+                call SetItemPosition(gg_eye, targetX + 50, targetY)
+                call SetItemVisible(gg_eye, true)
+                // Remove the ability since we couldn't add the item
+                call UnitRemoveAbility(gg_target, 'A01Y')
+            endif
+        else
+            call BJDebugMsg("Target cannot receive items - dropping near target")
+            // Drop the item near the target unit
+            call SetItemPosition(gg_eye, targetX + 50, targetY)
+            call SetItemVisible(gg_eye, true)
+        endif
     endif
 
     set gg_impacted = true
 endfunction
-
 
 function MissileTick takes nothing returns nothing
     local real dx   = GetUnitX(gg_target) - gg_curX
@@ -63,13 +101,16 @@ function MissileTick takes nothing returns nothing
 endfunction
 
 function ConditionEyePickup takes nothing returns boolean
+    call BJDebugMsg("Checking Eye pickup condition")
     return GetItemTypeId(GetManipulatedItem()) == ITEM_EYE_OF_SARG
 endfunction
 
 function FilterHostile takes nothing returns boolean
-    local boolean isHostile = (GetOwningPlayer(GetFilterUnit()) == Player(PLAYER_NEUTRAL_AGGRESSIVE))
-    local boolean isAlive = UnitAlive(GetFilterUnit())
-    local boolean isNotAncient = not IsUnitType(GetFilterUnit(), UNIT_TYPE_ANCIENT)
+    local unit u = GetFilterUnit()
+    local boolean isHostile = (GetOwningPlayer(u) == Player(PLAYER_NEUTRAL_AGGRESSIVE))
+    local boolean isAlive = UnitAlive(u)
+    local boolean isNotAncient = not IsUnitType(u, UNIT_TYPE_ANCIENT)
+    call BJDebugMsg("Checking unit - Hostile: " + B2S(isHostile) + " Alive: " + B2S(isAlive) + " NotAncient: " + B2S(isNotAncient))
     return isHostile and isAlive and isNotAncient
 endfunction
 
@@ -94,45 +135,51 @@ function HandleEyePickup_Sargeras takes nothing returns nothing
     local real   uy     = GetUnitY(pickup)
     local group  grp    = gg_grp_Search
     local unit   best   = null
-    local real   bestD  = 0.0
+    local real   bestD  = -1.0
     local unit   u
     local real   dx
     local real   dy
     local real   dist2
 
-    if GetOwningPlayer(pickup) == Player(PLAYER_NEUTRAL_AGGRESSIVE) then
-        return
-    endif
+    call BJDebugMsg("Handle Eye pickup triggered")
 
-    call GroupClear(grp)
-    call GroupEnumUnitsInRange(grp, ux, uy, SEARCH_RADIUS, Condition(function FilterHostile))
+    // Only proceed if picker is NOT neutral aggressive
+    if GetOwningPlayer(pickup) != Player(PLAYER_NEUTRAL_AGGRESSIVE) then
+        call BJDebugMsg("Valid pickup unit detected")
+        
+        call GroupClear(grp)
+        call GroupEnumUnitsInRange(grp, ux, uy, SEARCH_RADIUS, Condition(function FilterHostile))
+        call BJDebugMsg("Searching for hostiles in range: " + R2S(SEARCH_RADIUS))
 
-    loop
-        set u = FirstOfGroup(grp)
-        exitwhen u == null
-        call GroupRemoveUnit(grp, u)
+        loop
+            set u = FirstOfGroup(grp)
+            exitwhen u == null
+            call GroupRemoveUnit(grp, u)
 
-        if FilterHostile() then
             set dx = GetUnitX(u) - ux
             set dy = GetUnitY(u) - uy
             set dist2 = dx * dx + dy * dy
 
             if dist2 > bestD then
                 set bestD = dist2
-                set best  = u
+                set best = u
+                call BJDebugMsg("Found potential target at distance: " + R2S(SquareRoot(dist2)))
             endif
+        endloop
+
+        if best == null then
+            call BJDebugMsg("No valid targets found")
+            return
         endif
-    endloop
 
-    if best == null then
-        call TriggerAddAction(gg_trg_EyePickup, function HandleEyePickup_Sargeras)
-        return
+        call BJDebugMsg("Target found - launching missile")
+        set gg_eye = picked  // Store reference to item first
+        call RemoveItem(picked)  // Then remove it from original holder
+        set gg_caster = pickup
+        call StartEyeMissile(ux, uy, best)
+    else
+        call BJDebugMsg("Pickup by neutral aggressive unit - ignoring")
     endif
-
-    call RemoveItem(picked)
-    set gg_caster = pickup
-    set gg_eye    = picked
-    call StartEyeMissile(ux, uy, best)
 endfunction
 
 function InitEyePickupTrigger takes nothing returns nothing
@@ -141,6 +188,7 @@ function InitEyePickupTrigger takes nothing returns nothing
     call TriggerAddCondition(gg_trg_EyePickup, Condition(function ConditionEyePickup))
     call TriggerAddAction(gg_trg_EyePickup, function HandleEyePickup_Sargeras)
     set gg_grp_Search = CreateGroup()
+    call BJDebugMsg("Eye of Sargeras Guard Initialized")
 endfunction
 
 endlibrary

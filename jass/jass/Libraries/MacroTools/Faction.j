@@ -475,36 +475,110 @@ library Faction initializer OnInit requires Persons, Event, Set, QuestData, Envi
    private method distributeUnits takes nothing returns nothing
   local group g = CreateGroup()
   local unit u = null
-  local UnitType loopUnitType = 0
+  local UnitType loopUnitType
 
-  // Gather all units belonging to the leaving player
   call GroupEnumUnitsOfPlayer(g, this.Player, null)
 
   loop
     set u = FirstOfGroup(g)
     exitwhen u == null
-    set loopUnitType = UnitType.ByHandle(u)
 
-    call UnitDropAllItems(u)
+    if Legend.ByHandle(u) == 0 and ControlPoint.ByHandle(u) == 0 then
+      set loopUnitType = UnitType.ByHandle(u)
+      call UnitDropAllItems(u)
 
-    if IsUnitType(u, UNIT_TYPE_HERO) then
-      call this.Person.addGold(HERO_COST)
-      set this.xp = this.xp + GetHeroXP(u)
-      if Legend.ByHandle(u) != 0 then
-        set this.xp = this.xp - Legend.ByHandle(u).StartingXP
+      if IsUnitType(u, UNIT_TYPE_HERO) then
+        call this.Person.addGold(HERO_COST)
+        set this.xp = this.xp + GetHeroXP(u)
+        if Legend.ByHandle(u) != 0 then
+          set this.xp = this.xp - Legend.ByHandle(u).StartingXP
+        endif
+
+      elseif loopUnitType.Refund then
+        set this.Gold   = this.Gold   + loopUnitType.GoldCost   * REFUND_PERCENT
+        set this.Lumber = this.Lumber + loopUnitType.LumberCost * REFUND_PERCENT
       endif
-    elseif loopUnitType.Refund then
-      set this.Gold = this.Gold + loopUnitType.GoldCost * REFUND_PERCENT
-      set this.Lumber = this.Lumber + loopUnitType.LumberCost * REFUND_PERCENT
+
+      call RemoveUnit(u)
     endif
 
-    call RemoveUnit(u)
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyGroup(g)
+  set g = null
+endmethod
+
+
+private method distributeLegends takes nothing returns nothing
+  local group g               = CreateGroup()
+  local unit u                = null
+  local integer i             = 0
+  local Faction f
+  local force eligiblePlayers = this.Team.CreateForceFromPlayers()
+
+  call ForceRemovePlayer(eligiblePlayers, this.Player)
+  call GroupEnumUnitsOfPlayer(g, this.Player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if Legend.ByHandle(u) != 0 then
+      // Grant shared control to each teammate
+      set i = 0
+      loop
+        exitwhen i == this.Team.FactionCount
+        set f = this.Team.GetFactionByIndex(i)
+
+        if f.Person != 0 and f.Player != this.Player then
+          call SetPlayerAlliance(this.Player, f.Player, ALLIANCE_SHARED_CONTROL, true)
+          call SetPlayerAlliance(f.Player, this.Player, ALLIANCE_SHARED_CONTROL, true)
+        endif
+
+        set i = i + 1
+      endloop
+    endif
+
+    call GroupRemoveUnit(g, u)
+  endloop
+
+  call DestroyForce(eligiblePlayers)
+  call DestroyGroup(g)
+  set eligiblePlayers = null
+  set g               = null
+endmethod
+
+private method distributeControlPoints takes nothing returns nothing
+  local group g               = CreateGroup()
+  local unit u                = null
+  local force eligiblePlayers = this.Team.CreateForceFromPlayers()
+
+
+  call ForceRemovePlayer(eligiblePlayers, this.Player)
+
+  call GroupEnumUnitsOfPlayer(g, this.Player, null)
+
+  loop
+    set u = FirstOfGroup(g)
+    exitwhen u == null
+
+    if ControlPoint.ByHandle(u) != 0 then
+      if this.Team.PlayerCount > 1 then
+        call SetUnitOwner(u, ForcePickRandomPlayer(eligiblePlayers), false)
+      else
+        call SetUnitOwner(u, Player(bj_PLAYER_NEUTRAL_VICTIM), false)
+      endif
+    endif
+
     call GroupRemoveUnit(g, u)
   endloop
 
   // Cleanup
+  call DestroyForce(eligiblePlayers)
   call DestroyGroup(g)
-  set g = null
+  set eligiblePlayers = null
+  set g               = null
 endmethod
 
     stub method OnPreLeave takes nothing returns nothing
@@ -520,6 +594,8 @@ endmethod
       call OnPreLeave()
     if team.PlayerCount > 1 and team.ScoreStatus == SCORESTATUS_NORMAL and GetGameTime() > 60 then
       call distributeUnits()
+      call distributeLegends()
+      call distributeControlPoints()
       call distributeResources()
       call distributeExperience()
      else

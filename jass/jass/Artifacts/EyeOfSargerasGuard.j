@@ -4,6 +4,7 @@ globals
     constant integer ITEM_EYE_OF_SARG = 'I003'
     constant real    SEARCH_RADIUS    = 700.0
     
+    hashtable gg_effectTable = null
     trigger gg_trg_EyePickup
     group   gg_grp_Search
     timer   gg_timer
@@ -16,6 +17,9 @@ globals
     real    gg_interval  = 0.03
     integer gg_modelHash = 0
     boolean gg_impacted
+    effect  gg_overheadEffect = null
+    effect  gg_missileEffect = null
+    timer   gg_impactCleanupTimer = null
 endglobals
 
 function GetInventorySize takes unit u returns integer
@@ -31,101 +35,107 @@ function GetInventorySize takes unit u returns integer
     return slots
 endfunction
 
+function CleanupImpactEffect takes nothing returns nothing
+    local timer t = GetExpiredTimer()
+    local effect fx = LoadEffectHandle(gg_effectTable, GetHandleId(t), 0)
+    if fx != null then
+        call DestroyEffect(fx)
+    endif
+    call RemoveSavedHandle(gg_effectTable, GetHandleId(t), 0)
+    call DestroyTimer(t)
+endfunction
+
 function RemoveImpactEffect takes nothing returns nothing
+    if gg_overheadEffect != null then
+        call DestroyEffect(gg_overheadEffect)
+        set gg_overheadEffect = null
+    endif
     call DestroyTrigger(GetTriggeringTrigger())
 endfunction
 
 function OnMissileImpact takes nothing returns nothing
     local effect fx
     local trigger t
-    local real targetX
-    local real targetY
-    local integer initialSlots
-    local integer slotsAfterAbility
-    local integer finalSlots
+    local real targetX = GetUnitX(gg_target)
+    local real targetY = GetUnitY(gg_target)
     local boolean itemAdded
+    local real safeX = GetItemX(gg_eye)
+    local real safeY = GetItemY(gg_eye)
+    local timer impactTimer
     
-    set targetX = GetUnitX(gg_target)
-    set targetY = GetUnitY(gg_target)
-    set initialSlots = GetInventorySize(gg_target)
-    
-    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Initial inventory slots: " + I2S(initialSlots))
+    if gg_overheadEffect != null then
+        call DestroyEffect(gg_overheadEffect)
+        set gg_overheadEffect = null
+    endif
 
     if not UnitAlive(gg_target) then
-        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Target died before impact")
         call SetItemPosition(gg_eye, gg_curX, gg_curY)
         set fx = AddSpecialEffect("Objects\\SpawnModels\\Human\\HCancelDeath\\HCancelDeath.mdl", gg_curX, gg_curY)
-        call DestroyEffect(fx)
+        set impactTimer = CreateTimer()
+        call SaveEffectHandle(gg_effectTable, GetHandleId(impactTimer), 0, fx)
+        call TimerStart(impactTimer, 1.0, false, function CleanupImpactEffect)
         return
     endif
 
-    // First move item to a safe location
-    call SetItemPosition(gg_eye, 20229, 24244)
+    if GetItemTypeId(gg_eye) != ITEM_EYE_OF_SARG then
+        set gg_eye = CreateItem(ITEM_EYE_OF_SARG, safeX, safeY)
+    endif
     
-    // Add inventory ability FIRST
-    call UnitAddAbility(gg_target, 'A01Y')
-    
-    // Check slots after ability
-    set slotsAfterAbility = GetInventorySize(gg_target)
-    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Slots after ability: " + I2S(slotsAfterAbility))
-    
-    // Small delay to ensure ability is properly added
-    call TriggerSleepAction(0.01)
-    
-    // Try to add item using UnitAddItem (standard function)
     set itemAdded = UnitAddItem(gg_target, gg_eye)
+    
     if itemAdded then
-        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Item successfully added to unit")
-        // Success - add effects
         set fx = AddSpecialEffect("Abilities\\Spells\\Undead\\DarkRitual\\DarkRitualTarget.mdl", targetX, targetY)
         call BlzSetSpecialEffectScale(fx, 2.0)
         call BlzSetSpecialEffectTime(fx, 1.0)
+        set impactTimer = CreateTimer()
+        call SaveEffectHandle(gg_effectTable, GetHandleId(impactTimer), 0, fx)
+        call TimerStart(impactTimer, 1.0, false, function CleanupImpactEffect)
         
-        // Add overhead effect
-        set fx = AddSpecialEffectTarget("Doodads\\Cinematic\\EyeOfSargeras\\EyeOfSargeras.mdl", gg_target, "overhead")
+        set gg_overheadEffect = AddSpecialEffectTarget("Doodads\\Cinematic\\EyeOfSargeras\\EyeOfSargeras.mdl", gg_target, "overhead")
         
-        // Create death trigger for cleanup
         set t = CreateTrigger()
         call TriggerRegisterUnitEvent(t, gg_target, EVENT_UNIT_DEATH)
         call TriggerAddAction(t, function RemoveImpactEffect)
     else
-        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Failed to add item to unit")
-        // If failed, drop at missile location
-        call UnitRemoveAbility(gg_target, 'A01Y')
-        call SetItemPosition(gg_eye, gg_curX, gg_curY)
-        set fx = AddSpecialEffect("Objects\\SpawnModels\\Human\\HCancelDeath\\HCancelDeath.mdl", gg_curX, gg_curY)
-        call DestroyEffect(fx)
+        call SetItemPosition(gg_eye, safeX, safeY)
+        set fx = AddSpecialEffect("Objects\\SpawnModels\\Human\\HCancelDeath\\HCancelDeath.mdl", safeX, safeY)
+        set impactTimer = CreateTimer()
+        call SaveEffectHandle(gg_effectTable, GetHandleId(impactTimer), 0, fx)
+        call TimerStart(impactTimer, 1.0, false, function CleanupImpactEffect)
     endif
     
-    set finalSlots = GetInventorySize(gg_target)
-    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Final inventory slots: " + I2S(finalSlots))
-    
-    // Debug item location
-    if not itemAdded then
-        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Eye location: " + R2S(GetItemX(gg_eye)) + ", " + R2S(GetItemY(gg_eye)))
+    if not itemAdded and (GetItemTypeId(gg_eye) != ITEM_EYE_OF_SARG) then
+        set gg_eye = CreateItem(ITEM_EYE_OF_SARG, safeX, safeY)
     endif
     
     set gg_impacted = true
 endfunction
 
-
-
 function MissileTick takes nothing returns nothing
-    local real dx   = GetUnitX(gg_target) - gg_curX
-    local real dy   = GetUnitY(gg_target) - gg_curY
+    local real dx = GetUnitX(gg_target) - gg_curX
+    local real dy = GetUnitY(gg_target) - gg_curY
     local real dist = SquareRoot(dx * dx + dy * dy)
     local real step = gg_speed * gg_interval
 
+    if gg_missileEffect != null then
+        call DestroyEffect(gg_missileEffect)
+    endif
+
     if dist <= step or not UnitAlive(gg_target) then
+        if gg_missileEffect != null then
+            call DestroyEffect(gg_missileEffect)
+            set gg_missileEffect = null
+        endif
         call PauseTimer(gg_timer)
         call DestroyTimer(gg_timer)
+        set gg_timer = null
         call OnMissileImpact()
         return
     endif
 
     set gg_curX = gg_curX + dx / dist * step
     set gg_curY = gg_curY + dy / dist * step
-    call AddSpecialEffect("Abilities\\Spells\\Undead\\OrbOfDeath\\AnnihilationMissile.mdl", gg_curX, gg_curY)
+    set gg_missileEffect = AddSpecialEffect("Abilities\\Spells\\Undead\\OrbOfDeath\\AnnihilationMissile.mdl", gg_curX, gg_curY)
 endfunction
 
 function ConditionEyePickup takes nothing returns boolean
@@ -138,9 +148,9 @@ function FilterHostile takes nothing returns boolean
 endfunction
 
 function StartEyeMissile takes real sx, real sy, unit t returns nothing
-    set gg_target   = t
-    set gg_curX     = sx
-    set gg_curY     = sy
+    set gg_target = t
+    set gg_curX = sx
+    set gg_curY = sy
     set gg_impacted = false
 
     if gg_modelHash == 0 then
@@ -152,19 +162,18 @@ function StartEyeMissile takes real sx, real sy, unit t returns nothing
 endfunction
 
 function HandleEyePickup_Sargeras takes nothing returns nothing
-    local unit   pickup = GetTriggerUnit()
-    local item   picked = GetManipulatedItem()
-    local real   ux     = GetUnitX(pickup)
-    local real   uy     = GetUnitY(pickup)
-    local group  grp    = gg_grp_Search
-    local unit   best   = null
-    local real   bestD  = -1.0
-    local unit   u
-    local real   dx
-    local real   dy
-    local real   dist2
+    local unit pickup = GetTriggerUnit()
+    local item picked = GetManipulatedItem()
+    local real ux = GetUnitX(pickup)
+    local real uy = GetUnitY(pickup)
+    local group grp = gg_grp_Search
+    local unit best = null
+    local real bestD = -1.0
+    local unit u
+    local real dx
+    local real dy
+    local real dist2
 
-    // Only proceed if picker is NOT neutral aggressive
     if GetOwningPlayer(pickup) != Player(PLAYER_NEUTRAL_AGGRESSIVE) then
         call GroupClear(grp)
         call GroupEnumUnitsInRange(grp, ux, uy, SEARCH_RADIUS, Condition(function FilterHostile))
@@ -188,6 +197,11 @@ function HandleEyePickup_Sargeras takes nothing returns nothing
             return
         endif
 
+        if gg_overheadEffect != null then
+            call DestroyEffect(gg_overheadEffect)
+            set gg_overheadEffect = null
+        endif
+
         set gg_eye = picked
         call RemoveItem(picked)
         set gg_caster = pickup
@@ -196,6 +210,7 @@ function HandleEyePickup_Sargeras takes nothing returns nothing
 endfunction
 
 function InitEyePickupTrigger takes nothing returns nothing
+    set gg_effectTable = InitHashtable()
     set gg_trg_EyePickup = CreateTrigger()
     call TriggerRegisterAnyUnitEventBJ(gg_trg_EyePickup, EVENT_PLAYER_UNIT_PICKUP_ITEM)
     call TriggerAddCondition(gg_trg_EyePickup, Condition(function ConditionEyePickup))

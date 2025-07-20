@@ -1,4 +1,3 @@
-
 library EyeOfSargerasGuard
 
 globals
@@ -19,70 +18,97 @@ globals
     boolean gg_impacted
 endglobals
 
-function B2S takes boolean b returns string
-    if b then
-        return "true"
-    endif
-    return "false"
+function GetInventorySize takes unit u returns integer
+    local integer slots = 0
+    local integer i = 0
+    loop
+        exitwhen i >= 6
+        if UnitInventorySize(u) > i then
+            set slots = slots + 1
+        endif
+        set i = i + 1
+    endloop
+    return slots
 endfunction
 
 function RemoveImpactEffect takes nothing returns nothing
     call DestroyTrigger(GetTriggeringTrigger())
 endfunction
 
-
 function OnMissileImpact takes nothing returns nothing
     local effect fx
     local trigger t
-    local boolean canReceiveItems
-    local real targetX = GetUnitX(gg_target)
-    local real targetY = GetUnitY(gg_target)
-
-    call BJDebugMsg("Missile Impact at X: " + R2S(targetX) + " Y: " + R2S(targetY))
+    local real targetX
+    local real targetY
+    local integer initialSlots
+    local integer slotsAfterAbility
+    local integer finalSlots
+    local boolean itemAdded
+    
+    set targetX = GetUnitX(gg_target)
+    set targetY = GetUnitY(gg_target)
+    set initialSlots = GetInventorySize(gg_target)
+    
+    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Initial inventory slots: " + I2S(initialSlots))
 
     if not UnitAlive(gg_target) then
-        call BJDebugMsg("Target dead - dropping item at impact location")
+        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Target died before impact")
         call SetItemPosition(gg_eye, gg_curX, gg_curY)
-        call SetItemVisible(gg_eye, true)
-    else
-        // Check if unit can receive items (has inventory)
-        set canReceiveItems = not IsUnitType(gg_target, UNIT_TYPE_STRUCTURE) and UnitInventorySize(gg_target) > 0
-        
-        if canReceiveItems then
-            call BJDebugMsg("Target can receive items - attempting to give")
-            // First try to add ability
-            call UnitAddAbility(gg_target, 'A01Y')
-            
-            // Try to add item safely
-            call SetItemPosition(gg_eye, targetX, targetY)
-            if UnitAddItem(gg_target, gg_eye) then
-                call BJDebugMsg("Item added successfully")
-                
-                set fx = AddSpecialEffect("Abilities\\Spells\\Undead\\DarkRitual\\DarkRitualTarget.mdl", targetX, targetY)
-                call BlzSetSpecialEffectScale(fx, 2.0)
-                call BlzSetSpecialEffectTime(fx, 1.0)
-
-                set t = CreateTrigger()
-                call TriggerRegisterUnitEvent(t, gg_target, EVENT_UNIT_DEATH)
-                call TriggerAddAction(t, function RemoveImpactEffect)
-            else
-                call BJDebugMsg("Failed to add item - dropping near target")
-                // If item couldn't be added, drop it near the target
-                call SetItemPosition(gg_eye, targetX + 50, targetY)
-                call SetItemVisible(gg_eye, true)
-                // Remove the ability since we couldn't add the item
-                call UnitRemoveAbility(gg_target, 'A01Y')
-            endif
-        else
-            call BJDebugMsg("Target cannot receive items - dropping near target")
-            // Drop the item near the target unit
-            call SetItemPosition(gg_eye, targetX + 50, targetY)
-            call SetItemVisible(gg_eye, true)
-        endif
+        set fx = AddSpecialEffect("Objects\\SpawnModels\\Human\\HCancelDeath\\HCancelDeath.mdl", gg_curX, gg_curY)
+        call DestroyEffect(fx)
+        return
     endif
 
+    // First move item to a safe location
+    call SetItemPosition(gg_eye, 20229, 24244)
+    
+    // Add inventory ability FIRST
+    call UnitAddAbility(gg_target, 'A01Y')
+    
+    // Check slots after ability
+    set slotsAfterAbility = GetInventorySize(gg_target)
+    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Slots after ability: " + I2S(slotsAfterAbility))
+    
+    // Small delay to ensure ability is properly added
+    call TriggerSleepAction(0.01)
+    
+    // Try to add item using UnitAddItem (standard function)
+    set itemAdded = UnitAddItem(gg_target, gg_eye)
+    if itemAdded then
+        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Item successfully added to unit")
+        // Success - add effects
+        set fx = AddSpecialEffect("Abilities\\Spells\\Undead\\DarkRitual\\DarkRitualTarget.mdl", targetX, targetY)
+        call BlzSetSpecialEffectScale(fx, 2.0)
+        call BlzSetSpecialEffectTime(fx, 1.0)
+        
+        // Add overhead effect
+        set fx = AddSpecialEffectTarget("Doodads\\Cinematic\\EyeOfSargeras\\EyeOfSargeras.mdl", gg_target, "overhead")
+        
+        // Create death trigger for cleanup
+        set t = CreateTrigger()
+        call TriggerRegisterUnitEvent(t, gg_target, EVENT_UNIT_DEATH)
+        call TriggerAddAction(t, function RemoveImpactEffect)
+    else
+        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Failed to add item to unit")
+        // If failed, drop at missile location
+        call UnitRemoveAbility(gg_target, 'A01Y')
+        call SetItemPosition(gg_eye, gg_curX, gg_curY)
+        set fx = AddSpecialEffect("Objects\\SpawnModels\\Human\\HCancelDeath\\HCancelDeath.mdl", gg_curX, gg_curY)
+        call DestroyEffect(fx)
+    endif
+    
+    set finalSlots = GetInventorySize(gg_target)
+    call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Final inventory slots: " + I2S(finalSlots))
+    
+    // Debug item location
+    if not itemAdded then
+        call DisplayTextToPlayer(GetLocalPlayer(), 0, 0, "Eye location: " + R2S(GetItemX(gg_eye)) + ", " + R2S(GetItemY(gg_eye)))
+    endif
+    
     set gg_impacted = true
 endfunction
+
+
 
 function MissileTick takes nothing returns nothing
     local real dx   = GetUnitX(gg_target) - gg_curX
@@ -103,17 +129,12 @@ function MissileTick takes nothing returns nothing
 endfunction
 
 function ConditionEyePickup takes nothing returns boolean
-    call BJDebugMsg("Checking Eye pickup condition")
     return GetItemTypeId(GetManipulatedItem()) == ITEM_EYE_OF_SARG
 endfunction
 
 function FilterHostile takes nothing returns boolean
     local unit u = GetFilterUnit()
-    local boolean isHostile = (GetOwningPlayer(u) == Player(PLAYER_NEUTRAL_AGGRESSIVE))
-    local boolean isAlive = UnitAlive(u)
-    local boolean isNotAncient = not IsUnitType(u, UNIT_TYPE_ANCIENT)
-    call BJDebugMsg("Checking unit - Hostile: " + B2S(isHostile) + " Alive: " + B2S(isAlive) + " NotAncient: " + B2S(isNotAncient))
-    return isHostile and isAlive and isNotAncient
+    return GetOwningPlayer(u) == Player(PLAYER_NEUTRAL_AGGRESSIVE) and UnitAlive(u) and not IsUnitType(u, UNIT_TYPE_ANCIENT)
 endfunction
 
 function StartEyeMissile takes real sx, real sy, unit t returns nothing
@@ -143,15 +164,10 @@ function HandleEyePickup_Sargeras takes nothing returns nothing
     local real   dy
     local real   dist2
 
-    call BJDebugMsg("Handle Eye pickup triggered")
-
     // Only proceed if picker is NOT neutral aggressive
     if GetOwningPlayer(pickup) != Player(PLAYER_NEUTRAL_AGGRESSIVE) then
-        call BJDebugMsg("Valid pickup unit detected")
-        
         call GroupClear(grp)
         call GroupEnumUnitsInRange(grp, ux, uy, SEARCH_RADIUS, Condition(function FilterHostile))
-        call BJDebugMsg("Searching for hostiles in range: " + R2S(SEARCH_RADIUS))
 
         loop
             set u = FirstOfGroup(grp)
@@ -165,22 +181,17 @@ function HandleEyePickup_Sargeras takes nothing returns nothing
             if dist2 > bestD then
                 set bestD = dist2
                 set best = u
-                call BJDebugMsg("Found potential target at distance: " + R2S(SquareRoot(dist2)))
             endif
         endloop
 
         if best == null then
-            call BJDebugMsg("No valid targets found")
             return
         endif
 
-        call BJDebugMsg("Target found - launching missile")
-        set gg_eye = picked  // Store reference to item first
-        call RemoveItem(picked)  // Then remove it from original holder
+        set gg_eye = picked
+        call RemoveItem(picked)
         set gg_caster = pickup
         call StartEyeMissile(ux, uy, best)
-    else
-        call BJDebugMsg("Pickup by neutral aggressive unit - ignoring")
     endif
 endfunction
 
@@ -190,7 +201,6 @@ function InitEyePickupTrigger takes nothing returns nothing
     call TriggerAddCondition(gg_trg_EyePickup, Condition(function ConditionEyePickup))
     call TriggerAddAction(gg_trg_EyePickup, function HandleEyePickup_Sargeras)
     set gg_grp_Search = CreateGroup()
-    call BJDebugMsg("Eye of Sargeras Guard Initialized")
 endfunction
 
 endlibrary

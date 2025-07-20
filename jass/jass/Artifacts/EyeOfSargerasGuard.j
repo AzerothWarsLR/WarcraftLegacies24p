@@ -30,6 +30,7 @@ function RemoveImpactEffect takes nothing returns nothing
     call DestroyTrigger(GetTriggeringTrigger())
 endfunction
 
+
 function OnMissileImpact takes nothing returns nothing
     local effect fx
     local trigger t
@@ -45,14 +46,15 @@ function OnMissileImpact takes nothing returns nothing
         call SetItemVisible(gg_eye, true)
     else
         // Check if unit can receive items (has inventory)
-        set canReceiveItems = not IsUnitType(gg_target, UNIT_TYPE_STRUCTURE) and GetUnitState(gg_target, UNIT_STATE_MAX_INVENTORY_SIZE) > 0
+        set canReceiveItems = not IsUnitType(gg_target, UNIT_TYPE_STRUCTURE) and UnitInventorySize(gg_target) > 0
         
         if canReceiveItems then
             call BJDebugMsg("Target can receive items - attempting to give")
             // First try to add ability
             call UnitAddAbility(gg_target, 'A01Y')
             
-            // Try to add item
+            // Try to add item safely
+            call SetItemPosition(gg_eye, targetX, targetY)
             if UnitAddItem(gg_target, gg_eye) then
                 call BJDebugMsg("Item added successfully")
                 

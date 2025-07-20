@@ -35,9 +35,7 @@ library ArtifactSetup requires Artifact, ArtifactMenu
     set ARTIFACT_CROWNSTORMWIND = Artifact.create(CreateItem('I002', DUMMY_X, DUMMY_Y))
     call UnitAddItem(gg_unit_n021_2624, ARTIFACT_CROWNSTORMWIND.item)                      //Hogger
 
-    set ARTIFACT_EYEOFSARGERAS = Artifact.create(CreateItem('I003', DUMMY_X, DUMMY_Y))    //Eye of Sargeras
-    call UnitAddAbility(gg_unit_n04O_1571, ARTIFACT_HOLDER_ABIL_ID)             //Doom Guard
-    call UnitAddItem(gg_unit_n04O_1571, ARTIFACT_EYEOFSARGERAS.item)  
+    set ARTIFACT_EYEOFSARGERAS = Artifact.create(CreateItem('I003', -10244, -23550))    //Eye of Sargeras
 
     set ARTIFACT_SULFURAS = Artifact.create(CreateItem('I00H', DUMMY_X, DUMMY_Y))    //Sulfuras
     call UnitAddAbility(gg_unit_N00D_1457, ARTIFACT_HOLDER_ABIL_ID)             //Ragnaros

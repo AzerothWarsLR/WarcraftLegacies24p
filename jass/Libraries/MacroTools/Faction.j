@@ -565,9 +565,9 @@ private method distributeControlPoints takes nothing returns nothing
 
     if ControlPoint.ByHandle(u) != 0 then
       if this.Team.PlayerCount > 1 then
-        call SetUnitOwner(u, ForcePickRandomPlayer(eligiblePlayers), false)
+        call SetUnitOwner(u, ForcePickRandomPlayer(eligiblePlayers), true)
       else
-        call SetUnitOwner(u, Player(bj_PLAYER_NEUTRAL_VICTIM), false)
+        call SetUnitOwner(u, Player(bj_PLAYER_NEUTRAL_VICTIM), true)
       endif
     endif
 

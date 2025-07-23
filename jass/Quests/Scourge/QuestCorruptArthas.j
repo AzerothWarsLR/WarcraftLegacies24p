@@ -23,6 +23,7 @@ library QuestCorruptArthas requires GeneralHelpers, LegendLordaeron, LordaeronSe
       set LEGEND_ARTHAS.UnitType = 'Uear'
       call LEGEND_ARTHAS.ClearUnitDependencies()
       call SetPlayerTechResearched(this.Holder.Player, RESEARCH_ID, 1)
+      call DestroyTrigger(gg_trg_kill_arthas) 
     endmethod
 
     private method OnAdd takes nothing returns nothing

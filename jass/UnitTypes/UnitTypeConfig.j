@@ -257,7 +257,61 @@ library UnitTypeConfig initializer OnInit requires UnitType
 
     set unitType = UnitType.create('o05A')      //Workers
     set unitType.Refund = true 
-                                               
+    
+    set unitType = UnitType.create('h01W')     //Gates 
+    set unitType.IsGate = true 
+        
+    set unitType = UnitType.create('h01Y')      
+    set unitType.IsGate = true     
+        
+    set unitType = UnitType.create('h01X')      
+    set unitType.IsGate = true
+             
+    set unitType = UnitType.create('h02U')      
+    set unitType.IsGate = true        
+                   
+    set unitType = UnitType.create('h02T')      
+    set unitType.IsGate = true         
+                       
+    set unitType = UnitType.create('h02S')      
+    set unitType.IsGate = true         
+                            
+    set unitType = UnitType.create('h02K')      
+    set unitType.IsGate = true         
+                                 
+    set unitType = UnitType.create('h02L')      
+    set unitType.IsGate = true         
+                                      
+    set unitType = UnitType.create('h02M')      
+    set unitType.IsGate = true     
+                                           
+    set unitType = UnitType.create('h00K')      
+    set unitType.IsGate = true         
+                                                
+    set unitType = UnitType.create('h00M')      
+    set unitType.IsGate = true         
+                                                     
+    set unitType = UnitType.create('h00L')      
+    set unitType.IsGate = true      
+                                                          
+    set unitType = UnitType.create('h02H')      
+    set unitType.IsGate = true   
+                                                               
+    set unitType = UnitType.create('h02I')      
+    set unitType.IsGate = true   
+                                                                    
+    set unitType = UnitType.create('h02J')      
+    set unitType.IsGate = true   
+                                                                         
+    set unitType = UnitType.create('h04R')      
+    set unitType.IsGate = true   
+                                                                              
+    set unitType = UnitType.create('h04S')      
+    set unitType.IsGate = true   
+                                                                                   
+    set unitType = UnitType.create('h04T')      
+    set unitType.IsGate = true
+
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
  
  endfunction    

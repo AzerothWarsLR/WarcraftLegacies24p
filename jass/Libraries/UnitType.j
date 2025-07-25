@@ -28,8 +28,18 @@ library UnitType requires Environment
     readonly integer unitId = 0
     readonly boolean refund = false      //When the player leaves this unit gets deleted, cost refunded, and given to allies
     readonly boolean meta = false        //When the player leaves this unit is exempted from being affected
+    readonly boolean isGate = false      //When the player leaves gates will be handed to allies
     readonly string iconPath = null
     private integer unitCategory = 0
+    
+   
+      method operator IsGate takes nothing returns boolean
+        return isGate
+    endmethod
+    
+    method operator IsGate= takes boolean b returns nothing
+        set isGate = b
+    endmethod
 
     //How much gold the UnitType costs to train or build.
     method operator GoldCost takes nothing returns integer

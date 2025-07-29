@@ -18,6 +18,7 @@ library LegendTwilight initializer OnInit requires Legend
     set LEGEND_DEATHWING = Legend.create("")
     set LEGEND_DEATHWING.Unit = gg_unit_u01Y_0071
     set LEGEND_DEATHWING.PermaDies = true
+    set LEGEND_DEATHWING.IsCapital = true  
     set LEGEND_DEATHWING.DeathMessage = "Deathwing, the Black Scourge, is no more. The Destroyer has finally been defeated."
 
     set LEGEND_AZIL = Legend.create("")

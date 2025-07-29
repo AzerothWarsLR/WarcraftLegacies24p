@@ -51,6 +51,8 @@ library LegendNaga initializer OnInit requires Legend
     set LEGEND_NZOTH.Unit = gg_unit_U01Z_1237 
     set LEGEND_NZOTH.DeathMessage = "N'zoth the Corruptor lay in wait for millenia before enacting final ploy. In the end, it was all for naught; N'zoth lies dead, and he will never witness the true realization of his Black Empire." 
     set LEGEND_NZOTH.PermaDies = true 
+    set LEGEND_NZOTH.IsCapital = true  
+
 
     set LEGEND_NAZJATAR = Legend.create("") 
     set LEGEND_NAZJATAR.Unit = gg_unit_n045_3377 

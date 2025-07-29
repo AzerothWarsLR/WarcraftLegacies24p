@@ -507,6 +507,7 @@ library Faction initializer OnInit requires Persons, Event, Set, QuestData, Envi
       local group g = CreateGroup()
       local unit u = null
       local UnitType loopUnitType
+      local Legend legendUnit
   
       call GroupEnumUnitsOfPlayer(g, this.Player, null)
   
@@ -514,20 +515,18 @@ library Faction initializer OnInit requires Persons, Event, Set, QuestData, Envi
           set u = FirstOfGroup(g)
           exitwhen u == null
   
-          if Legend.ByHandle(u) == 0 and ControlPoint.ByHandle(u) == 0 then
+          set legendUnit = Legend.ByHandle(u)
+          
+        
+          if legendUnit == 0 and ControlPoint.ByHandle(u) == 0 then
               set loopUnitType = UnitType.ByHandle(u)
               
-              // Skip gates as they're handled separately
               if loopUnitType == 0 or not loopUnitType.IsGate then
                   call UnitDropAllItems(u)
   
                   if IsUnitType(u, UNIT_TYPE_HERO) then
                       call this.Person.addGold(HERO_COST)
                       set this.xp = this.xp + GetHeroXP(u)
-                      if Legend.ByHandle(u) != 0 then
-                          set this.xp = this.xp - Legend.ByHandle(u).StartingXP
-                      endif
-  
                   elseif loopUnitType.Refund then
                       set this.Gold   = this.Gold   + loopUnitType.GoldCost   * REFUND_PERCENT
                       set this.Lumber = this.Lumber + loopUnitType.LumberCost * REFUND_PERCENT
@@ -543,45 +542,47 @@ library Faction initializer OnInit requires Persons, Event, Set, QuestData, Envi
       call DestroyGroup(g)
       set g = null
   endmethod
-  
-  private method distributeLegends takes nothing returns nothing
-      local group g               = CreateGroup()
-      local unit u                = null
-      local integer i             = 0
-      local Faction f
-      local force eligiblePlayers = this.Team.CreateForceFromPlayers()
-  
-      call ForceRemovePlayer(eligiblePlayers, this.Player)
-      call GroupEnumUnitsOfPlayer(g, this.Player, null)
-  
-      loop
-          set u = FirstOfGroup(g)
-          exitwhen u == null
-  
-          if Legend.ByHandle(u) != 0 then
-              // Grant shared control to each teammate
-              set i = 0
-              loop
-                  exitwhen i == this.Team.FactionCount
-                  set f = this.Team.GetFactionByIndex(i)
-  
-                  if f.Person != 0 and f.Player != this.Player then
-                      call SetPlayerAlliance(this.Player, f.Player, ALLIANCE_SHARED_CONTROL, true)
-                      call SetPlayerAlliance(f.Player, this.Player, ALLIANCE_SHARED_CONTROL, true)
-                  endif
-  
-                  set i = i + 1
-              endloop
-          endif
-  
-          call GroupRemoveUnit(g, u)
-      endloop
-  
-      call DestroyForce(eligiblePlayers)
-      call DestroyGroup(g)
-      set eligiblePlayers = null
-      set g               = null
-  endmethod
+
+
+private method distributeLegends takes nothing returns nothing
+    local group g = CreateGroup()
+    local unit u
+    local Legend legendUnit
+    local integer i = 0
+    local Faction f
+    local force eligiblePlayers = this.Team.CreateForceFromPlayers()
+
+    call ForceRemovePlayer(eligiblePlayers, this.Player)
+    call GroupEnumUnitsOfPlayer(g, this.Player, null)
+
+    loop
+        set u = FirstOfGroup(g)
+        exitwhen u == null
+
+        set legendUnit = Legend.ByHandle(u)
+        
+        if legendUnit != 0 and legendUnit.IsCapital then
+            if this.Team.PlayerCount > 1 then
+                call SetUnitOwner(u, ForcePickRandomPlayer(eligiblePlayers), true)
+            else
+                call SetUnitOwner(u, Player(PLAYER_NEUTRAL_AGGRESSIVE), true)
+            endif
+        elseif legendUnit != 0 then
+            call UnitDropAllItems(u)
+            call this.Person.addGold(HERO_COST)
+            set this.xp = this.xp + GetHeroXP(u)
+            set this.xp = this.xp - legendUnit.StartingXP
+            call RemoveUnit(u)
+        endif
+
+        call GroupRemoveUnit(g, u)
+    endloop
+
+    call DestroyForce(eligiblePlayers)
+    call DestroyGroup(g)
+    set eligiblePlayers = null
+    set g = null
+endmethod
   
   private method distributeControlPoints takes nothing returns nothing
       local group g               = CreateGroup()

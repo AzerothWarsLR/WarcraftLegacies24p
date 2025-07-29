@@ -137,10 +137,15 @@ library Legend requires GeneralHelpers, Event, GeneralHelpers
       set this.startingXP = value 
     endmethod 
 
-    public method operator PermaDies= takes boolean b returns nothing 
-      set permaDies = b 
-      call refreshDummy() 
-    endmethod 
+   public method operator PermaDies takes nothing returns boolean
+       return this.permaDies
+   endmethod
+   
+   public method operator PermaDies= takes boolean b returns nothing 
+       set permaDies = b 
+       call refreshDummy() 
+   endmethod 
+
 
     public method operator DeathSfx= takes string s returns nothing 
       set deathSfx = s 

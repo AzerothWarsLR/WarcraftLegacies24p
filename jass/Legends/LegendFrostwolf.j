@@ -45,7 +45,7 @@ library LegendFrostwolf initializer OnInit requires Legend, Artifact
     set LEGEND_ORGRIMMAR = Legend.create("") 
     set LEGEND_ORGRIMMAR.Unit = gg_unit_o01B_0190 
     set LEGEND_ORGRIMMAR.DeathMessage = "Orgrimmar has been demolished. With it dies the hopes and dreams of a wartorn race seeking refuge in a new world." 
-
+    set LEGEND_ORGRIMMAR.IsCapital = true
     set LEGEND_HIGHMOUNTAIN = Legend.create("") 
     set LEGEND_HIGHMOUNTAIN.Unit = gg_unit_o06U_3106 
     set LEGEND_HIGHMOUNTAIN.DeathMessage = "Highmountain has been destroyed, and the last homeland of the tauren has fallen." 
